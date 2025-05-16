@@ -16,18 +16,14 @@ env:
   STEP_4_FILE: ".github/steps/4-step.md"
 
 jobs:
-  find_exercise:
-    name: Find Exercise Issue
-    uses: skills/exercise-toolkit/.github/workflows/find-exercise-issue.yml@v0.4.0
-
   check_step_work:
     name: Check step work
     runs-on: ubuntu-latest
-    needs: [find_exercise]
-    env:
-      ISSUE_URL: ${{ needs.find_exercise.outputs.issue-url }}
-
     steps:
+      - name: Find Exercise Issue
+        id: find-exercise-issue
+        uses: skills/exercise-toolkit/actions/find-exercise-issue@find-exercise-issue-action
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -37,14 +33,6 @@ jobs:
           repository: skills/exercise-toolkit
           path: exercise-toolkit
           ref: v0.4.0
-
-      - name: Update comment - checking work
-        run: |
-          gh issue comment "$ISSUE_URL" \
-            --body-file exercise-toolkit/markdown-templates/step-feedback/checking-work.md \
-            --edit-last
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check for theme minima in _config.yml
         id: check-theme-minima
@@ -74,35 +62,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMENT_BODY: ${{ steps.build-message-step-results.outputs.updated-text }}
+          ISSUE_URL: ${{ steps.find-exercise-issue.outputs.issue-url }}
 
       - name: Fail job if not all checks passed
         if: contains(steps.*.outcome, 'failure')
         run: exit 1
 
-      - name: Build message - step finished
-        id: build-message-step-finish
-        uses: skills/action-text-variables@v2
-        with:
-          template-file: exercise-toolkit/markdown-templates/step-feedback/step-finished-prepare-next-step.md
-          template-vars: |
-            next_step_number: 4
-
-      - name: Update comment - step finished
-        run: |
-          gh issue comment "$ISSUE_URL" \
-            --body "$ISSUE_BODY"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_BODY: ${{ steps.build-message-step-finish.outputs.updated-text }}
 
   post_next_step_content:
     name: Post next step content
-    needs: [find_exercise, check_step_work]
+    needs: [check_step_work]
     runs-on: ubuntu-latest
-    env:
-      ISSUE_URL: ${{ needs.find_exercise.outputs.issue-url }}
 
     steps:
+      - name: Find Exercise Issue
+        id: find-exercise-issue
+        uses: skills/exercise-toolkit/actions/find-exercise-issue@find-exercise-issue-action
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -119,6 +95,7 @@ jobs:
             --body-file "$STEP_4_FILE"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_URL: ${{ steps.find-exercise-issue.outputs.issue-url }}
 
       - name: Create comment - watching for progress
         run: |
@@ -126,6 +103,7 @@ jobs:
             --body-file exercise-toolkit/markdown-templates/step-feedback/watching-for-progress.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_URL: ${{ steps.find-exercise-issue.outputs.issue-url }}
 
       - name: Disable current workflow and enable next one
         run: |
