@@ -1,0 +1,51 @@
+name: Issue Commands
+
+on:
+  issue_comment:
+    types: [created]
+
+# permissions needed for reacting to IssueOps commands on issues and PRs
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  help:
+    runs-on: ubuntu-latest
+    steps:
+      # execute IssueOps command logic, hooray!
+      # this will be used to "gate" all future steps below
+      - name: Show full context and event payload
+        run: echo "$FULL_CONTEXT"
+        env:
+          FULL_CONTEXT: ${{ toJSON(github) }}
+      - uses: github/command@v2.0.1
+        id: help-command
+        with:
+          command: ".help"
+          reaction: "eyes"
+          allowed_contexts: issue
+
+      - uses: github/command@v2.0.1
+        id: skip-command
+        with:
+          command: ".skip"
+          reaction: "eyes"
+          allowed_contexts: issue
+
+      - name: Help
+        if: ${{ steps.help-command.outputs.continue == 'true' }}
+        uses: GrantBirki/comment@v2.1.1
+        with:
+          body: |
+            I have nothing useful to say, but In the future I would have specific help instructions for each step!
+
+      - name: Skip
+        if: ${{ steps.skip-command.outputs.continue == 'true' }}
+        uses: GrantBirki/comment@v2.1.1
+        with:
+          body: |
+            I don't know how to assess which step you are on so I don't know how to skip it!
+            Once I know how to assess which step you are on, and what the next step is I will be able to skip it for you.
+
+
