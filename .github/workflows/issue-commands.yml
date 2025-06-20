@@ -7,7 +7,8 @@ on:
 # permissions needed for reacting to IssueOps commands on issues and PRs
 permissions:
   issues: write
-  contents: read
+  contents: write
+  actions: write
 
 jobs:
   help:
@@ -19,33 +20,88 @@ jobs:
         run: echo "$FULL_CONTEXT"
         env:
           FULL_CONTEXT: ${{ toJSON(github) }}
-      - uses: github/command@v2.0.1
-        id: help-command
-        with:
-          command: ".help"
-          reaction: "eyes"
-          allowed_contexts: issue
 
-      - uses: github/command@v2.0.1
-        id: skip-command
-        with:
-          command: ".skip"
-          reaction: "eyes"
-          allowed_contexts: issue
+      - uses: ./.github/actions/current-step
 
-      - name: Help
-        if: ${{ steps.help-command.outputs.continue == 'true' }}
-        uses: GrantBirki/comment@v2.1.1
-        with:
-          body: |
-            I have nothing useful to say, but In the future I would have specific help instructions for each step!
-
-      - name: Skip
-        if: ${{ steps.skip-command.outputs.continue == 'true' }}
-        uses: GrantBirki/comment@v2.1.1
-        with:
-          body: |
-            I don't know how to assess which step you are on so I don't know how to skip it!
-            Once I know how to assess which step you are on, and what the next step is I will be able to skip it for you.
+      - run: echo "Current step number is ${{ steps.current_step.outputs.step_number }}"
 
 
+      # - uses: github/command@v2.0.1
+      #   id: help-command
+      #   with:
+      #     command: ".help"
+      #     reaction: "eyes"
+      #     allowed_contexts: issue
+
+      # - uses: github/command@v2.0.1
+      #   id: skip-command
+      #   with:
+      #     command: ".skip"
+      #     reaction: "eyes"
+      #     allowed_contexts: issue
+
+      # # Checkout repository for skip command
+      # - name: Checkout
+      #   if: ${{ steps.skip-command.outputs.continue == 'true' }}
+      #   uses: actions/checkout@v4
+
+      # - name: Help
+      #   if: ${{ steps.help-command.outputs.continue == 'true' }}
+      #   uses: GrantBirki/comment@v2.1.1
+      #   with:
+      #     body: |
+      #       I have nothing useful to say, but In the future I would have specific help instructions for each step!
+
+      # - name: Skip
+      #   if: ${{ steps.skip-command.outputs.continue == 'true' }}
+      #   id: skip_response
+      #   uses: GrantBirki/comment@v2.1.1
+      #   with:
+      #     body: |
+      #       I'll help you skip to the next step! Let me do that for you now...
+
+      # # Calculate next step number
+      # - name: Calculate next step number
+      #   if: ${{ steps.skip-command.outputs.continue == 'true' }}
+      #   id: next_step
+      #   run: |
+      #     CURRENT_STEP="${{ steps.current_step.outputs.step_number }}"
+      #     NEXT_STEP=$((CURRENT_STEP + 1))
+      #     echo "number=$NEXT_STEP" >> $GITHUB_OUTPUT
+
+      # # Disable current step workflow
+      # - name: Disable current step workflow
+      #   if: ${{ steps.skip-command.outputs.continue == 'true' }}
+      #   run: |
+      #     gh workflow disable "Step ${{ steps.current_step.outputs.step_number }}"
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # # Enable next step workflow
+      # - name: Enable next step workflow
+      #   if: ${{ steps.skip-command.outputs.continue == 'true' }}
+      #   run: |
+      #     gh workflow enable "Step ${{ steps.next_step.outputs.number }}"
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # # Post next step content
+      # - name: Post next step content
+      #   if: ${{ steps.skip-command.outputs.continue == 'true' }}
+      #   uses: GrantBirki/comment@v2.1.1
+      #   with:
+      #     file: ".github/steps/${{ steps.next_step.outputs.number }}-step.md"
+      #     issue-number: ${{ github.event.issue.number }}
+      #     vars: |
+      #       login: ${{ github.event.comment.user.login }}
+      #       full_repo_name: ${{ github.repository }}
+
+      # # Confirm skip completed
+      # - name: Confirm skip completed
+      #   if: ${{ steps.skip-command.outputs.continue == 'true' }}
+      #   uses: GrantBirki/comment@v2.1.1
+      #   with:
+      #     body: |
+      #       ✅ Successfully skipped to Step ${{ steps.next_step.outputs.number }}!
+
+      #       The next step's instructions have been posted above. You can continue with the exercise.
